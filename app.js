@@ -1,6 +1,8 @@
 const fs = require('fs')
 const readline = require('readline')
 const { google } = require('googleapis')
+const request = require('request')
+const cheerio = require('cheerio')
 const MongoClient = require('mongodb').MongoClient
 const url = "mongodb://paulfitz:one2345@ds111063.mlab.com:11063/premier-league-18-19"
 
@@ -116,8 +118,6 @@ const listEvents = auth => {
             let goalDiff = parseInt(table[i].goalDiff);
             let points = parseInt(table[i].points);
 
-            // INSERT FIXTURES INTO THE DATABASE
-
             if (err) throw err;
             var myobj = {
               name,
@@ -132,7 +132,7 @@ const listEvents = auth => {
 
             db.collection('table').insertOne( myobj, function(err, res) {
               if (err) throw err;
-              console.log(`${myobj} inserted`)
+              console.log(`${JSON.stringify(myobj)} inserted`)
             })
           }
         }
