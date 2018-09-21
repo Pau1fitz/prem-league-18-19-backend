@@ -8,6 +8,8 @@ const url = "mongodb://paulfitz:one2345@ds111063.mlab.com:11063/premier-league-1
 
 const SCOPES = ['https://www.googleapis.com/auth/calendar.readonly']
 const TOKEN_PATH = 'token.json'
+const TOP_SCORERS_URL = 'http://www.bbc.co.uk/sport/football/premier-league/top-scorers'
+const LEAGUE_TABLE_URL = 'http://www.espn.co.uk/football/table/_/league/eng.1'
 
 // Load client secrets from a local file.
 fs.readFile('credentials.json', (err, content) => {
@@ -65,17 +67,13 @@ const listEvents = auth => {
     db.dropDatabase(function(err, result){
       if (err) throw err
       console.log(`Database Dropped Success ${result}`)
-
-      let leagueTableUrl = 'http://www.espn.co.uk/football/table/_/league/eng.1'
       
-      request(leagueTableUrl, function (error, response, body) {
+      request(LEAGUE_TABLE_URL, function (error, response, body) {
         if(!error){
-          var $ = cheerio.load(body);
+          let $ = cheerio.load(body);
           let table = [];
-          var data = $('.standings');
-
           $('.team-names').each(function(i, elm) {
-            var obj = {};
+            const obj = {};
             obj.team = $(this).text();
             table[i] = obj;
           });
@@ -93,19 +91,19 @@ const listEvents = auth => {
           });
 
           $('.standings-row > td:nth-child(4)').each(function(i, elm) {
-              table[i].draw = $(this).text();
+            table[i].draw = $(this).text();
           });
 
           $('.standings-row > td:nth-child(5)').each(function(i, elm) {
-              table[i].lost = $(this).text();
+            table[i].lost = $(this).text();
           });
 
           $('.standings-row > td:nth-last-child(2)').each(function(i, elm) {
-              table[i].goalDiff = $(this).text();
+            table[i].goalDiff = $(this).text();
           });
 
           $('.standings-row > td:last-child').each(function(i, elm) {
-              table[i].points = $(this).text();
+            table[i].points = $(this).text();
           });
 
           for(var i = 0; i < table.length; i++) {
@@ -119,7 +117,7 @@ const listEvents = auth => {
             let points = parseInt(table[i].points);
 
             if (err) throw err;
-            var myobj = {
+            const myobj = {
               name,
               abbr,
               gamesPlayed,
@@ -136,7 +134,49 @@ const listEvents = auth => {
             })
           }
         }
-      });
+      })
+
+      request(TOP_SCORERS_URL, function (error, response, body) {
+        if(!error){
+          var $ = cheerio.load(body)
+          let topScorers = []
+          var data = $('.top-player-stats')
+
+          $('.top-player-stats__name').each(function(i, elm) {
+            var obj = {}
+            obj.player = $(this).text()
+            topScorers[i] = obj
+          });
+
+          $('.top-player-stats__goals-scored-number').each(function(i, elm) {
+            topScorers[i].goals = $(this).text()
+          });
+
+          $('.team-short-name').each(function(i, elm) {
+            topScorers[i].team = $(this).text()
+          });
+
+          for(var i = 0; i < topScorers.length; i++) {
+            let player = topScorers[i].player
+            let goals = parseInt(topScorers[i].goals)
+            let team = topScorers[i].team
+              if (err) throw err;
+              var myobj = {
+                player,
+                team,
+                goals,
+              }
+
+              db.collection('topscorers').insertOne(myobj, function(err, res) {
+                if (err) throw err
+                console.log(`${JSON.stringify(myobj)} inserted`)
+              })
+          }
+        } else {
+          console.log('error:', error) // Print the error if one occurred
+        }
+      })
+
      
       const calendar = google.calendar('v3');
       calendar.calendarList.list({
