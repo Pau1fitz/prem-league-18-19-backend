@@ -173,7 +173,7 @@ const listEvents = auth => {
               })
           }
         } else {
-          console.log('error:', error) // Print the error if one occurred
+          console.log('error:', error) 
         }
       })
 
